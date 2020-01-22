@@ -1,0 +1,22 @@
+*filter
+:INPUT ACCEPT [1:40]
+:FORWARD ACCEPT [0:0]
+:OUTPUT ACCEPT [1169:237690]
+COMMIT
+*nat
+:PREROUTING ACCEPT [3:205]
+:INPUT ACCEPT [59:670]
+:OUTPUT ACCEPT [16:172]
+:POSTROUTING ACCEPT [20:257]
+-A POSTROUTING -o eth2 -j MASQUERADE
+-A PREROUTING  -p tcp -d 30.0.0.150 --dport 25 -j DNAT --to 192.168.1.9:25
+-A POSTROUTING -p tcp -s 192.168.1.0/24 -d 192.168.1.9 --dport 25 -j SNAT --to-source 30.0.0.150:25
+-A PREROUTING  -p tcp -d 30.0.0.150 --dport 80 -j DNAT --to 192.168.1.9:80
+-A POSTROUTING -p tcp -s 192.168.1.0/24 -d 192.168.1.9 --dport 80 -j SNAT --to-source 30.0.0.150:80
+-A PREROUTING  -p tcp -d 30.0.0.150 --dport 443 -j DNAT --to 192.168.1.9:443
+-A POSTROUTING -p tcp -s 192.168.1.0/24 -d 192.168.1.9 --dport 443 -j SNAT --to-source 30.0.0.150:443
+-A PREROUTING  -p tcp -d 30.0.0.150 --dport 53 -j DNAT --to 192.168.1.9:53
+-A POSTROUTING -p tcp -s 192.168.1.0/24 -d 192.168.1.9 --dport 53 -j SNAT --to-source 30.0.0.150:53
+-A PREROUTING  -p udp -d 30.0.0.150 --dport 53 -j DNAT --to 192.168.1.9:53
+-A POSTROUTING -p udp -s 192.168.1.0/24 -d 192.168.1.9 --dport 53 -j SNAT --to-source 30.0.0.150:53
+COMMIT

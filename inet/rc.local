@@ -1,0 +1,14 @@
+#!/bin/bash
+
+echo 1 > /proc/sys/net/ipv4/ip_forward
+
+if ! ip addr show dev lo | grep -q 30[.]0[.]255[.]1; then
+    ip addr add 30.0.255.1/24 dev lo
+fi
+
+if [ -f /run/fakerootdns.pid ]; then
+    kill -9 `cat /run/fakerootdns.pid`
+    rm /run/fakerootdns.pid
+fi
+python3 /usr/local/sbin/fakerootdns.py 30.0.255.1 >/var/log/fakedns.log 2>&1 &
+echo $! > /run/fakerootdns.pid
