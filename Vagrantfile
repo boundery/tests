@@ -29,8 +29,19 @@ Vagrant.configure("2") do |config|
       sudo cp /vagrant/inet/intercept.py /usr/local/sbin/
 
       #https://github.com/hal/testsuite.next/blob/master/how-run-pebble.md
-      sudo wget https://github.com/letsencrypt/pebble/releases/download/v2.3.0/pebble_linux-amd64 -O /usr/local/sbin/pebble
-      sudo chmod a+x /usr/local/sbin/pebble
+      #docker run --rm -it -v `pwd`:/output modedemploi/minica \
+      #  -ca-cert pebble.minica.pem -ca-key pebble.minica.key.pem \
+      #  -domains acme-v02.api.letsencrypt.org,acme-staging-v02.api.letsencrypt.org,localhost \
+      #  -ip-addresses 30.0.0.1,30.0.1.1,127.0.0.1
+      #sudo chown -R ...
+      if ! [ -x /usr/local/sbin/pebble ]; then
+        sudo wget https://github.com/letsencrypt/pebble/releases/download/v2.3.0/pebble_linux-amd64 -O /usr/local/sbin/pebble
+        sudo chmod a+x /usr/local/sbin/pebble
+      fi
+      mkdir -p /etc/pebble/
+      sudo cp -r /vagrant/inet/pebble/* /etc/pebble/
+      sudo cp /vagrant/inet/rewrite_pebble.sh /usr/local/sbin/
+      sudo chmod a+x /usr/local/sbin/rewrite_pebble.sh
 
       sudo cp /vagrant/inet/rc.local /etc/
       sudo chmod a+x /etc/rc.local
@@ -46,6 +57,9 @@ Vagrant.configure("2") do |config|
     boundery.vm.provision "shell", inline: <<-SHELL
       sudo cp /vagrant/boundery/nodnsupdate /etc/dhcp/dhclient-enter-hooks.d/
       sudo chmod a+x /etc/dhcp/dhclient-enter-hooks.d/nodnsupdate
+
+      sudo cp /vagrant/inet/pebble/pebble.minica.pem /usr/local/share/ca-certificates/pebble.minica.crt
+      sudo update-ca-certificates
 
       sudo cp /vagrant/boundery/rc.local /etc/
       sudo chmod a+x /etc/rc.local
@@ -89,6 +103,9 @@ Vagrant.configure("2") do |config|
     #    .vmdk can wrap a raw image, so no need to copy to .vdi:
     #    VBoxManage internalcommands createrawvmdk -filename test.vmdk -rawdisk raw.img
     client.vm.provision "shell", inline: <<-SHELL
+      sudo cp /vagrant/inet/pebble/pebble.minica.pem /usr/local/share/ca-certificates/pebble.minica.crt
+      sudo update-ca-certificates
+
       #XXX Install selenium/chromedriver/any other deps.
       #XXX Because we short circuit the dyndns NS forward to the pi, need to explicitly
       #    check that username.boundery.me gets the right NS destination (30.0.0.150).
@@ -125,6 +142,7 @@ Vagrant.configure("2") do |config|
     server.vm.synced_folder ".", "/vagrant", disabled: true
 
     #XXX Attach (and boot off of) USB stick that client wrote the image to.
+    #XXX Need to figure out how to get pebble's root cert into the os...
     #XXX Attach USB stick for RW storage.
   end
 end

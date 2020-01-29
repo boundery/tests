@@ -1,0 +1,12 @@
+{
+  "pebble": {
+    "listenAddress": "0.0.0.0:4443",
+    "managementListenAddress": "0.0.0.0:15000",
+    "certificate": "/etc/pebble/acme-v02.api.letsencrypt.org/cert.pem",
+    "privateKey": "/etc/pebble/acme-v02.api.letsencrypt.org/key.pem",
+    "httpPort": 80,
+    "tlsPort": 443,
+    "ocspResponderURL": "",
+    "externalAccountBindingRequired": false
+  }
+}

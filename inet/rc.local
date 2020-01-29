@@ -20,4 +20,16 @@ echo $! > /run/intercept.pid
 
 fi
 
+if [ -f /run/rewrite_pebble.pid ]; then
+   kill -9 `cat /run/rewrite_pebble.pid`
+   rm /run/rewrite_pebble.pid
 fi
+/usr/local/sbin/rewrite_pebble.sh -l >/var/log/rewrite_pebble.log 2>&1 &
+echo $! > /run/rewrite_pebble.pid
+
+if [ -f /run/pebble.pid ]; then
+   kill -9 `cat /run/pebble.pid`
+   rm /run/pebble.pid
+fi
+PEBBLE_VA_NOSLEEP=1 /usr/local/sbin/pebble -config /etc/pebble/pebble-config.json >/var/log/pebble.log 2>&1 &
+echo $! > /run/pebble.pid
