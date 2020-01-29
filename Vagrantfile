@@ -21,13 +21,12 @@ Vagrant.configure("2") do |config|
                     virtualbox__intnet: "boundery_inet"
     inet.vm.provision "shell", inline: <<-SHELL
       sudo apt-get update
-      sudo apt-get install -y --no-install-recommends unbound python3-dnslib dnsutils
+      sudo apt-get install -y --no-install-recommends python3-dnslib dnsutils socat netsed
 
-      sudo cp /vagrant/inet/test-recursor.conf /etc/unbound/unbound.conf.d/
-      sudo cp /vagrant/inet/fakeroot.hints /etc/unbound/
-      sudo /etc/init.d/unbound restart
+      sudo cp /vagrant/boundery/nodnsupdate /etc/dhcp/dhclient-enter-hooks.d/
+      sudo chmod a+x /etc/dhcp/dhclient-enter-hooks.d/nodnsupdate
 
-      sudo cp /vagrant/inet/fakerootdns.py /usr/local/sbin/
+      sudo cp /vagrant/inet/intercept.py /usr/local/sbin/
 
       #https://github.com/hal/testsuite.next/blob/master/how-run-pebble.md
       sudo wget https://github.com/letsencrypt/pebble/releases/download/v2.3.0/pebble_linux-amd64 -O /usr/local/sbin/pebble
@@ -40,15 +39,17 @@ Vagrant.configure("2") do |config|
   end
 
   ################# BOUNDERY SERVER #################
-  config.vm.define "boundery" do |boundery|
+  config.vm.define "boundery.me" do |boundery|
     boundery.vm.hostname = "boundery"
     boundery.vm.network "private_network", ip: "30.0.1.9",
                         virtualbox__intnet: "boundery_inet"
     boundery.vm.provision "shell", inline: <<-SHELL
+      sudo cp /vagrant/boundery/nodnsupdate /etc/dhcp/dhclient-enter-hooks.d/
+      sudo chmod a+x /etc/dhcp/dhclient-enter-hooks.d/nodnsupdate
+
       sudo cp /vagrant/boundery/rc.local /etc/
       sudo chmod a+x /etc/rc.local
       sudo /etc/rc.local
-      #XXX Get /etc/resolv.conf pointed at unbound on inet.
 
       #XXX Install docker and any other deps.  Basically run setup_server
     SHELL
@@ -89,6 +90,8 @@ Vagrant.configure("2") do |config|
     #    VBoxManage internalcommands createrawvmdk -filename test.vmdk -rawdisk raw.img
     client.vm.provision "shell", inline: <<-SHELL
       #XXX Install selenium/chromedriver/any other deps.
+      #XXX Because we short circuit the dyndns NS forward to the pi, need to explicitly
+      #    check that username.boundery.me gets the right NS destination (30.0.0.150).
     SHELL
 
     #XXX Provisioner to copy in tests, install client and run tests

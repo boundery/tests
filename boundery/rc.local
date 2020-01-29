@@ -1,3 +1,6 @@
 #!/bin/bash
 
 ip route add 30.0.0.0/16 via 30.0.1.1
+
+#/etc/dhcp/dhclient-enter-hooks.d/nodnsupdate protects this from eth0 dhcp renew.
+echo "nameserver 30.0.1.1" > /etc/resolv.conf
