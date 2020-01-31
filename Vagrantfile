@@ -64,11 +64,7 @@ Vagrant.configure("2") do |config|
       sudo cp /vagrant/boundery/rc.local /etc/
       sudo chmod a+x /etc/rc.local
       sudo /etc/rc.local
-
-      #XXX Install docker and any other deps.  Basically run setup_server
     SHELL
-
-    #XXX Provisioner to install containers, os images, client installers, etc.
   end
 
   ################# HOME ROUTER #################
@@ -111,7 +107,8 @@ Vagrant.configure("2") do |config|
       #    check that username.boundery.me gets the right NS destination (30.0.0.150).
     SHELL
 
-    #XXX Provisioner to copy in tests, install client and run tests
+    #XXX Provisioner to install client from boundery.me
+    #XXX Provisioner to copy in (or rely on /vagrant?) and run tests
   end
 
   ################# HOME SERVER #################

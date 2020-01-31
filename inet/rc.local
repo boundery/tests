@@ -18,7 +18,12 @@ python3 /usr/local/sbin/intercept.py --all-qtypes --tcp -u 10.0.2.3 \
         >/var/log/intercept.log 2>&1 &
 echo $! > /run/intercept.pid
 
+if [ -f /run/checkip_aws_com.pid ]; then
+    kill -9 `cat /run/checkip_aws_com.pid`
+    rm /run/checkip_aws_com.pid
 fi
+socat tcp-listen:80,reuseaddr,fork exec:'echo -e HTTP/1.1 200 OK\n\n30.0.1.9' > /var/log/checkip.log 2>&1 &
+echo $! > /run/checkip_aws_com.pid
 
 if [ -f /run/rewrite_pebble.pid ]; then
    kill -9 `cat /run/rewrite_pebble.pid`
