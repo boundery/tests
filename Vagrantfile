@@ -64,6 +64,9 @@ Vagrant.configure("2") do |config|
       sudo cp /vagrant/inet/pebble/pebble.minica.pem /usr/local/share/ca-certificates/pebble.minica.crt
       sudo update-ca-certificates
 
+      sudo mkdir -p /root/data/centralui
+      sudo cp /vagrant/boundery/email.json /vagrant/boundery/recaptcha.json /root/data/centralui/
+
       sudo cp /vagrant/boundery/rc.local /etc/
       sudo chmod a+x /etc/rc.local
       sudo /etc/rc.local
