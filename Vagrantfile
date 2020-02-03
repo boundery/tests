@@ -52,11 +52,14 @@ Vagrant.configure("2") do |config|
   ################# BOUNDERY SERVER #################
   config.vm.define "boundery.me" do |boundery|
     boundery.vm.hostname = "boundery"
-    boundery.vm.network "private_network", ip: "30.0.1.9",
+    boundery.vm.network "private_network", auto_config: false,
                         virtualbox__intnet: "boundery_inet"
     boundery.vm.provision "shell", inline: <<-SHELL
       sudo cp /vagrant/boundery/nodnsupdate /etc/dhcp/dhclient-enter-hooks.d/
       sudo chmod a+x /etc/dhcp/dhclient-enter-hooks.d/nodnsupdate
+
+      sudo cp /vagrant/boundery/boundery.conf /etc/network/interfaces.d/
+      sudo ifup -a
 
       sudo cp /vagrant/inet/pebble/pebble.minica.pem /usr/local/share/ca-certificates/pebble.minica.crt
       sudo update-ca-certificates
@@ -70,23 +73,22 @@ Vagrant.configure("2") do |config|
   ################# HOME ROUTER #################
   config.vm.define "router" do |router|
     router.vm.hostname = "router"
-    router.vm.network "private_network", ip: "192.168.1.1",
+    router.vm.network "private_network", auto_config: false,
                       virtualbox__intnet: "client_router"
-    router.vm.network "private_network", ip: "30.0.0.150",
+    router.vm.network "private_network", auto_config: false,
                       virtualbox__intnet: "router_inet"
     router.vm.provision "shell", inline: <<-SHELL
       sudo apt-get update
       sudo DEBIAN_FRONTEND=noninteractive apt-get install -y dnsmasq iptables-persistent
+
+      sudo cp /vagrant/router/router.conf /etc/network/interfaces.d/
+      sudo ifup -a
 
       sudo cp /vagrant/router/rules.v4 /etc/iptables/
       sudo /etc/init.d/netfilter-persistent restart
 
       sudo cp /vagrant/router/dhcp.conf /vagrant/router/dns.conf /etc/dnsmasq.d/
       sudo /etc/init.d/dnsmasq restart
-
-      sudo cp /vagrant/router/rc.local /etc/
-      sudo chmod a+x /etc/rc.local
-      sudo /etc/rc.local
     SHELL
   end
 
