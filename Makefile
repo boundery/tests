@@ -40,3 +40,19 @@ upload-macos: start-vms $(BOUNDERY_SSHCONF)
 	vagrant ssh boundery.me -c 'sudo mkdir -p /root/data/sslnginx/html/clients'
 	scp -F $(BOUNDERY_SSHCONF) $(CLIENT_SRC)/macOS/*.dmg \
 	  root@boundery.me:/root/data/sslnginx/html/clients/
+
+upload-pczip: start-vms
+	@test $(OS_SRC)
+	vagrant ssh boundery.me -c '[ -f /usr/local/share/ca-certificates/pebble.minica.crt ]'
+	make -C $(OS_SRC) pc_zip
+	vagrant ssh boundery.me -c 'sudo mkdir -p /root/data/sslnginx/html/images'
+	scp -F $(BOUNDERY_SSHCONF) $(OS_SRC)/build/amd64/images/pc.zip \
+	  root@boundery.me:/root/data/sslnginx/html/images/
+
+upload-rpi3zip: start-vms
+	@test $(OS_SRC)
+	vagrant ssh boundery.me -c '[ -f /usr/local/share/ca-certificates/pebble.minica.crt ]'
+	make -C $(OS_SRC) rpi3_zip
+	vagrant ssh boundery.me -c 'sudo mkdir -p /root/data/sslnginx/html/images'
+	scp -F $(BOUNDERY_SSHCONF) $(OS_SRC)/build/arm64/images/rpi3.zip \
+	  root@boundery.me:/root/data/sslnginx/html/images/
