@@ -16,3 +16,27 @@ upload-central: start-vms $(BOUNDERY_SSHCONF)
 	vagrant upload $(CENTRAL_SRC)/setupserver /tmp/setupserver boundery.me
 	vagrant ssh boundery.me -c 'echo fakepasswd | sudo /tmp/setupserver'
 	SERVER=boundery.me SSH_CONF=`readlink -f $(BOUNDERY_SSHCONF)` make -C $(CENTRAL_SRC) deploy
+
+upload-linux: start-vms $(BOUNDERY_SSHCONF)
+	@test $(CLIENT_SRC)
+	vagrant ssh boundery.me -c '[ -f /usr/local/share/ca-certificates/pebble.minica.crt ]'
+	make -C $(CLIENT_SRC) linux
+	vagrant ssh boundery.me -c 'sudo mkdir -p /root/data/sslnginx/html/clients'
+	scp -F $(BOUNDERY_SSHCONF) $(CLIENT_SRC)/linux/*.tar.gz \
+	  root@boundery.me:/root/data/sslnginx/html/clients/
+
+upload-windows: start-vms $(BOUNDERY_SSHCONF)
+	@test $(CLIENT_SRC)
+	vagrant ssh boundery.me -c '[ -f /usr/local/share/ca-certificates/pebble.minica.crt ]'
+	make -C $(CLIENT_SRC) windows
+	vagrant ssh boundery.me -c 'sudo mkdir -p /root/data/sslnginx/html/clients'
+	scp -F $(BOUNDERY_SSHCONF) $(CLIENT_SRC)/windows/*.msi \
+	  root@boundery.me:/root/data/sslnginx/html/clients/
+
+upload-macos: start-vms $(BOUNDERY_SSHCONF)
+	@test $(CLIENT_SRC)
+	vagrant ssh boundery.me -c '[ -f /usr/local/share/ca-certificates/pebble.minica.crt ]'
+	make -C $(CLIENT_SRC) macos
+	vagrant ssh boundery.me -c 'sudo mkdir -p /root/data/sslnginx/html/clients'
+	scp -F $(BOUNDERY_SSHCONF) $(CLIENT_SRC)/macOS/*.dmg \
+	  root@boundery.me:/root/data/sslnginx/html/clients/
