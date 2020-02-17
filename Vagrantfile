@@ -108,6 +108,7 @@ Vagrant.configure("2") do |config|
     client.vm.hostname = "client"
     client.vm.network "private_network",
                       virtualbox__intnet: "client_router", type: "dhcp"
+    client.vm.network "forwarded_port", host: 22222, guest: 22222
     client.vm.provision "shell", inline: <<-SHELL
       #XXX Install selenium/chromedriver/any other deps.
       #XXX Because we short circuit the dyndns NS forward to the pi, need to explicitly
@@ -142,14 +143,12 @@ Vagrant.configure("2") do |config|
     end
 
     server.vm.hostname = "server"
-    #server.vm.network "private_network", :mac => "443839FFF001", :adapter => 1,
-    #                  virtualbox__intnet: "client_router", auto_config: false
-    server.vm.network "private_network", :mac => "443839FFF001",
-                      virtualbox__intnet: "client_router", type: "dhcp"
+    server.vm.network "private_network", :mac => "443839FFF001", :adapter => 1,
+                      virtualbox__intnet: "client_router", auto_config: false
 
-    #XXX Need to disable/redirect 'vagrant ssh' for "Waiting for machine to boot"
-    #server.ssh.port=60000
-    #server.ssh.host = "192.168.1.9"
+    #Redirect this to our python dummy sshd
+    server.ssh.port=22222
+    server.ssh.host = "localhost"
     server.vm.synced_folder ".", "/vagrant", disabled: true
 
     #XXX Need to figure out how to get pebble's root cert into the os...
