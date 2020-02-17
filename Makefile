@@ -5,6 +5,8 @@ build/server.img:
 	dd if=/dev/zero of=$@ bs=$$((1024*1024)) count=$(IMG_SIZE)
 	printf 'n\np\n1\n\n\nt\nc\nw\n' | fdisk $@
 	mformat -i$@@@1M -s32 -h64 -t$(IMG_SIZE) -v"BNDRY TEST"
+	@echo "precious" > build/preserve.txt
+	mcopy -i$@@@1M build/preserve.txt ::
 build/server.vmdk: build/server.img
 	[ -f $< ] || VBoxManage internalcommands createrawvmdk -filename $@ -rawdisk `readlink -f $<`
 
