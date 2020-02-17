@@ -68,3 +68,14 @@ upload-rpi3zip: start-vms
 	vagrant ssh boundery.me -c 'sudo mkdir -p /root/data/sslnginx/html/images'
 	scp -F $(BOUNDERY_SSHCONF) $(OS_SRC)/build/arm64/images/rpi3.zip \
 	  root@boundery.me:/root/data/sslnginx/html/images/
+
+test-linux-pczip: start-vms
+#	XXX stop (or destroy?) server.
+	vagrant provision --provision-with install client
+	@mdel -ibuild/server.img@@1M ::/pairingkey 2>/dev/null || true
+	vagrant ssh client -c '/vagrant/run_test.sh pc' &
+	@echo Waiting for pairingkey to show up...
+	@while ! mdir -b -ibuild/server.img@@1M ::/pairingkey 2>/dev/null; do sleep 1; done
+#	XXX boot server.
+#	XXX Wait for test completion
+#	XXX verify that preserve.txt contains "precious\n"

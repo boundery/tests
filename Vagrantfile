@@ -108,20 +108,34 @@ Vagrant.configure("2") do |config|
     client.vm.hostname = "client"
     client.vm.network "private_network",
                       virtualbox__intnet: "client_router", type: "dhcp"
+    client.vm.network "forwarded_port", host: 5900, guest: 5900
     client.vm.network "forwarded_port", host: 22222, guest: 22222
     client.vm.provision "shell", inline: <<-SHELL
-      #XXX Install selenium/chromedriver/any other deps.
-      #XXX Because we short circuit the dyndns NS forward to the pi, need to explicitly
-      #    check that username.boundery.me gets the right NS destination (30.0.0.150).
-      #    dig ns nolan.boundery.me. @boundery.me.
+      sudo apt-get update
+      #XXX We install python3-cffi-backend here due to a briefcase bug. bug 44?
+      sudo apt-get install -y --no-install-recommends network-manager xvfb x11vnc \
+           python3-cffi-backend python3-paramiko libnss3-tools
 
       sudo cp /vagrant/client/rc.local /etc/
       sudo chmod a+x /etc/rc.local
       sudo /etc/rc.local
     SHELL
 
-    #XXX Provisioner to install client from boundery.me
-    #XXX Provisioner to copy in (or rely on /vagrant?) and run tests
+    client.vm.provision "install", type: "shell", run: "never", privileged: false, inline: <<-SHELL
+      #XXX Sanity check fakedns, other environment stuff?
+
+      sudo /etc/rc.local #refetch ssl root cert in case pebble restarted.
+
+      rm -rf boundery-linux-client*
+      wget https://boundery.me/static/clients/boundery-linux-client.tar.gz
+      tar zxvf boundery-linux-client.tar.gz
+
+      #Make root cert available to client's embedded ca list.
+      cp /etc/ssl/certs/ca-certificates.crt boundery-linux-client/app_packages/certifi/cacert.pem
+      #Make root cert available to chromium/chromedriver's embedded ca list.
+      certutil -A -n "fakeroot" -t "TCu,Cu,Tu" -i /usr/local/share/ca-certificates/fakeroot.crt \
+          -d sql:/home/vagrant/.pki/nssdb || true
+    SHELL
   end
 
   ################# HOME SERVER #################
