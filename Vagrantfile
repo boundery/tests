@@ -104,14 +104,14 @@ Vagrant.configure("2") do |config|
     #    .vmdk can wrap a raw image, so no need to copy to .vdi:
     #    VBoxManage internalcommands createrawvmdk -filename test.vmdk -rawdisk raw.img
     client.vm.provision "shell", inline: <<-SHELL
-      while [ ! -f /usr/local/share/ca-certificates/fakeroot.crt ]; do
-        sudo wget --timeout 3 https://acme-v02.api.letsencrypt.org:15000/roots/0 -O /usr/local/share/ca-certificates/fakeroot.crt
-      done
-      sudo update-ca-certificates
-
       #XXX Install selenium/chromedriver/any other deps.
       #XXX Because we short circuit the dyndns NS forward to the pi, need to explicitly
       #    check that username.boundery.me gets the right NS destination (30.0.0.150).
+      #    dig ns nolan.boundery.me. @boundery.me.
+
+      sudo cp /vagrant/client/rc.local /etc/
+      sudo chmod a+x /etc/rc.local
+      sudo /etc/rc.local
     SHELL
 
     #XXX Provisioner to install client from boundery.me
