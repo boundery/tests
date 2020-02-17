@@ -1,7 +1,7 @@
 # -*- mode: ruby -*-
 # vi: set ft=ruby :
 
-vagrant_dir = File.join(File.dirname(File.expand_path(__FILE__)), ".vagrant")
+build_dir = File.join(File.dirname(File.expand_path(__FILE__)), "build")
 
 Vagrant.configure("2") do |config|
   config.vm.box = "debian/contrib-buster64"
@@ -97,12 +97,17 @@ Vagrant.configure("2") do |config|
 
   ################# CLIENT #################
   config.vm.define "client" do |client|
+    config.vm.provider "virtualbox" do |vb|
+      vb.memory = "1024"
+
+      vb.customize ['storageattach', :id, '--storagectl', 'SATA Controller', '--port', 1, '--device', 0,
+                    '--type', 'hdd', '--mtype', 'shareable', '--hotpluggable', 'on',
+                    '--medium', File.join(build_dir, "server.vmdk")]
+    end
+
     client.vm.hostname = "client"
     client.vm.network "private_network",
                       virtualbox__intnet: "client_router", type: "dhcp"
-    #XXX Figure out how to attach USB stick to write OS image to.  See: client/Vagrantfile
-    #    .vmdk can wrap a raw image, so no need to copy to .vdi:
-    #    VBoxManage internalcommands createrawvmdk -filename test.vmdk -rawdisk raw.img
     client.vm.provision "shell", inline: <<-SHELL
       #XXX Install selenium/chromedriver/any other deps.
       #XXX Because we short circuit the dyndns NS forward to the pi, need to explicitly
@@ -127,10 +132,12 @@ Vagrant.configure("2") do |config|
       vb.memory = "1024"
 
       vb.customize ["modifyvm", :id, "--firmware", "efi"]
-      #vb.customize ['storageattach', :id, '--storagectl', 'SATA', '--port', 1, '--device', 0,
-      #              '--type', 'hdd', '--medium', 'boot.vmdk']
 
-      serial_log = File.join(vagrant_dir, "server_cons.log")
+      vb.customize ['storageattach', :id, '--storagectl', 'SATA', '--port', 1, '--device', 0,
+                    '--type', 'hdd', '--mtype', 'shareable', '--hotpluggable', 'on',
+                    '--medium', File.join(build_dir, "server.vmdk")]
+
+      serial_log = File.join(build_dir, "server_cons.log")
       vb.customize ["modifyvm", :id, "--uart1", "0x3F8", "4", "--uartmode1", "file", serial_log]
     end
 
@@ -145,7 +152,6 @@ Vagrant.configure("2") do |config|
     #server.ssh.host = "192.168.1.9"
     server.vm.synced_folder ".", "/vagrant", disabled: true
 
-    #XXX Attach (and boot off of) USB stick that client wrote the image to.
     #XXX Need to figure out how to get pebble's root cert into the os...
     #XXX Attach USB stick for RW storage.
   end
