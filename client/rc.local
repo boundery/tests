@@ -6,4 +6,8 @@ while [ ! -f /usr/local/share/ca-certificates/fakeroot.crt ]; do
 done
 update-ca-certificates
 
+if ! ps ax | grep -q "fake_vagrant_sshd[.]py"; then
+    python3 /usr/local/sbin/fake_vagrant_sshd.py &>/var/log/fake_vagrant_sshd.log &
+fi
+
 exit 0

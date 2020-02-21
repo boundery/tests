@@ -116,6 +116,8 @@ Vagrant.configure("2") do |config|
       sudo apt-get install -y --no-install-recommends network-manager xvfb x11vnc \
            python3-cffi-backend python3-paramiko libnss3-tools
 
+      sudo cp /vagrant/fake_vagrant_sshd.py /usr/local/sbin/
+
       sudo cp /vagrant/client/rc.local /etc/
       sudo chmod a+x /etc/rc.local
       sudo /etc/rc.local
@@ -162,7 +164,7 @@ Vagrant.configure("2") do |config|
 
     #Redirect this to our python dummy sshd
     server.ssh.port=22222
-    server.ssh.host = "localhost"
+    server.ssh.host = "127.0.0.1"
     server.vm.synced_folder ".", "/vagrant", disabled: true
 
     #XXX Need to figure out how to get pebble's root cert into the os...

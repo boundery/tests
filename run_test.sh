@@ -32,8 +32,6 @@ Xvfb &> .xvfb.log &
 sleep 1
 DISPLAY=:0 x11vnc -forever -shared &> .x11vnc.log &
 
-python3 /vagrant/fake_vagrant_sshd.py &
-
 DISPLAY=:0 python3 /vagrant/test_client.py -d &
 while ! ss -tln | grep -q ':9999'; do
     sleep 1
@@ -41,9 +39,8 @@ done
 
 ZIPFILE_NAME="$1" BROWSER=/vagrant/fake_browser.sh boundery-linux-client/Boundery\ Client &
 
-fg %4 #tester
+fg %3 #tester
 jobs
-kill -9 %5 #client
-kill -9 %3 #fake_vagrant_sshd.py
+kill -9 %4 #client
 kill -9 %2 #x11vnc
 kill -9 %1 #Xvfb
