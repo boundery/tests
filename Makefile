@@ -8,7 +8,7 @@ build/server.img:
 	@echo "precious" > build/preserve.txt
 	mcopy -i$@@@1M build/preserve.txt ::
 build/server.vmdk: build/server.img
-	[ -f $< ] || VBoxManage internalcommands createrawvmdk -filename $@ -rawdisk `readlink -f $<`
+	[ -f $@ ] || VBoxManage internalcommands createrawvmdk -filename $@ -rawdisk `readlink -f $<`
 
 .PHONY: start-vms
 start-vms: build/server.vmdk
