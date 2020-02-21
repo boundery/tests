@@ -2,10 +2,6 @@
 import socket, sys, threading
 import paramiko
 
-#Python doesn't switch to unbuffered if stdout/err are redirected?
-import functools
-print = functools.partial(print, flush=True)
-
 class Server(paramiko.ServerInterface):
     def check_channel_request(self, kind, chanid):
         if kind == 'session':
