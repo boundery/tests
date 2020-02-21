@@ -1,8 +1,10 @@
 #!/usr/bin/env python
-import socket
-import sys
-import threading
+import socket, sys, threading
 import paramiko
+
+#Python doesn't switch to unbuffered if stdout/err are redirected?
+import functools
+print = functools.partial(print, flush=True)
 
 class Server(paramiko.ServerInterface):
     def check_channel_request(self, kind, chanid):
@@ -21,6 +23,11 @@ class Server(paramiko.ServerInterface):
     def check_channel_pty_request(self, channel, term, width, height,
                                   pixelwidth, pixelheight, modes):
         assert(False)
+        return False
+
+    def check_channel_env_request(self, channel, name, value):
+        assert(False)
+        return False
 
     def handle_cmd(self, cmd, chan):
         ret = self.handle_cmd_streams(cmd.decode(), chan.makefile('r'),
@@ -31,7 +38,9 @@ class Server(paramiko.ServerInterface):
     def handle_cmd_streams(self, cmd, stdin, stdout, stderr):
         last_exit = 0
         print("cmd:", cmd)
-        if cmd == '' or 'bash -l' in cmd:
+        if cmd == '':
+            pass #vagrant seems to send these randomly.  Just return success.
+        elif 'bash -l' in cmd:
             for line in stdin:
                 line=line[:-1]
                 print('line:', line)
@@ -51,7 +60,8 @@ class Server(paramiko.ServerInterface):
         elif cmd.startswith('scp -t '):
             #Assume they're only sending 1 file, and respond to all msgs.
             stdout.write('\0' * 7)
-            print('XXX \'%s\'' % stdin.read())
+            stdout.flush()
+            print('scp uploaded: \'%s\'' % stdin.read())
         return last_exit
 
 sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -66,6 +76,6 @@ while True:
     t = paramiko.Transport(client)
     t.set_gss_host(socket.getfqdn(""))
     t.load_server_moduli()
-    t.add_server_key( paramiko.RSAKey.generate(bits=1024))
+    t.add_server_key(paramiko.RSAKey.generate(bits=1024))
     print("Starting ssh session")
     t.start_server(server=Server())
