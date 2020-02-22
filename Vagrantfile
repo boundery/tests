@@ -114,7 +114,8 @@ Vagrant.configure("2") do |config|
       sudo apt-get update
       #XXX We install python3-cffi-backend here due to a briefcase bug. bug 44?
       sudo apt-get install -y --no-install-recommends network-manager xvfb x11vnc \
-           python3-cffi-backend python3-paramiko libnss3-tools
+           python3-selenium chromium-driver chromium-sandbox libnss3-tools \
+           python3-cffi-backend python3-paramiko
 
       sudo cp /vagrant/fake_vagrant_sshd.py /usr/local/sbin/
 
