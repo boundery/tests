@@ -126,7 +126,7 @@ Vagrant.configure("2") do |config|
     client.vm.provision "install", type: "shell", run: "never", privileged: false, inline: <<-SHELL
       #XXX Sanity check fakedns, other environment stuff?
 
-      sudo /etc/rc.local #refetch ssl root cert in case pebble restarted.
+      sudo /etc/rc.local #Refetch ssl root cert in case pebble restarted.
 
       rm -rf boundery-linux-client*
       wget https://boundery.me/static/clients/boundery-linux-client.tar.gz
@@ -134,7 +134,12 @@ Vagrant.configure("2") do |config|
 
       #Make root cert available to client's embedded ca list.
       cp /etc/ssl/certs/ca-certificates.crt boundery-linux-client/app_packages/certifi/cacert.pem
+
       #Make root cert available to chromium/chromedriver's embedded ca list.
+      if [ ! -f .pki/nssdb/cert9.db ]; then
+        mkdir -p .pki/nssdb
+        certutil -N --empty-password -d sql:/home/vagrant/.pki/nssdb
+      fi
       certutil -A -n "fakeroot" -t "TCu,Cu,Tu" -i /usr/local/share/ca-certificates/fakeroot.crt \
           -d sql:/home/vagrant/.pki/nssdb || true
     SHELL
