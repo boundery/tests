@@ -79,3 +79,12 @@ test-linux-pczip: start-vms
 #	XXX boot server.
 #	XXX Wait for test completion
 #	XXX verify that preserve.txt contains "precious\n"
+
+server-serial:
+	@script/vboxmgr controlvm server_VBOXID changeuartmode1 server build/serial_cons.sock
+	@echo "Ctrl-o to exit"
+	@socat UNIX-CONNECT:build/serial_cons.sock STDIO,raw,echo=0,escape=0x0f
+
+client-vnc:
+	@script/vboxmgr client_VBOXID
+	gvncviewer localhost:0

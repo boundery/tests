@@ -1,0 +1,17 @@
+#!/bin/bash
+
+ARGS=()
+for arg in "$@"; do
+    if echo "$arg" | grep -q '_VBOXID$'; then
+        arg=`echo $arg | sed 's/_VBOXID$//1'`
+        if [ ! -f ".vagrant/machines/$arg/virtualbox/id" ]; then
+            echo "$arg is not running" >&2
+            exit 99
+        fi
+        ARGS+=(`cat .vagrant/machines/$arg/virtualbox/id`)
+    else
+        ARGS+=("$arg")
+    fi
+done
+
+VBoxManage "${ARGS[@]}"
