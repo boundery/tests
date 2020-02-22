@@ -9,6 +9,7 @@ build/server.img:
 	mcopy -i$@@@1M build/preserve.txt ::
 build/server.vmdk: build/server.img
 	[ -f $@ ] || VBoxManage internalcommands createrawvmdk -filename $@ -rawdisk `readlink -f $<`
+	@VBoxManage internalcommands sethduuid $@ 00000000-99aa-0000-8899-aabbccddeeff
 
 .PHONY: start-vms
 start-vms: build/server.vmdk
