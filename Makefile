@@ -11,6 +11,11 @@ build/server.vmdk: build/server.img
 	[ -f $@ ] || VBoxManage internalcommands createrawvmdk -filename $@ -rawdisk `readlink -f $<`
 	@VBoxManage internalcommands sethduuid $@ 00000000-99aa-0000-8899-aabbccddeeff
 
+build/server_data.vdi:
+	@mkdir -p build/empty
+	qemu-img convert -f vvfat -O vdi fat:32:build/empty $@
+	@VBoxManage internalcommands sethduuid $@ 11111111-99aa-0000-8899-aabbccddeeff
+
 .PHONY: start-vms
 start-vms: build/server.vmdk
 	vagrant up
@@ -70,8 +75,8 @@ upload-rpi3zip: start-vms
 	scp -F $(BOUNDERY_SSHCONF) $(OS_SRC)/build/arm64/images/rpi3.zip \
 	  root@boundery.me:/root/data/sslnginx/html/images/
 
-test-linux-pczip: start-vms
-#	XXX stop (or destroy?) server.
+test-linux-pczip: start-vms build/server_data.vdi
+	vagrant halt -f server
 	vagrant provision --provision-with install client
 	@mdel -ibuild/server.img@@1M ::/pairingkey 2>/dev/null || true
 	vagrant ssh client -c '/vagrant/run_test.sh pc' &

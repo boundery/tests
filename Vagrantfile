@@ -156,11 +156,15 @@ Vagrant.configure("2") do |config|
 
       vb.customize ["modifyvm", :id, "--firmware", "efi"]
 
-      vb.customize ['storageattach', :id, '--storagectl', 'SATA', '--port', 1, '--device', 0,
+      #--port 0 clobbers the empty /dev/sda image in the base box.
+      vb.customize ['storageattach', :id, '--storagectl', 'SATA', '--port', 0, '--device', 0,
                     '--type', 'hdd', '--mtype', 'shareable', '--hotpluggable', 'on',
                     '--medium', File.join(build_dir, "server.vmdk")]
+      vb.customize ['storageattach', :id, '--storagectl', 'SATA', '--port', 1, '--device', 0,
+                    '--type', 'hdd', '--hotpluggable', 'on',
+                    '--medium', File.join(build_dir, "server_data.vdi")]
 
-      serial_log = File.join(build_dir, "server_cons.log")
+      serial_log = File.join(build_dir, "serial_cons.log")
       vb.customize ["modifyvm", :id, "--uart1", "0x3F8", "4", "--uartmode1", "file", serial_log]
     end
 
@@ -174,6 +178,5 @@ Vagrant.configure("2") do |config|
     server.vm.synced_folder ".", "/vagrant", disabled: true
 
     #XXX Need to figure out how to get pebble's root cert into the os...
-    #XXX Attach USB stick for RW storage.
   end
 end
