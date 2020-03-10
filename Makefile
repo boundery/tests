@@ -79,11 +79,13 @@ test-linux-pczip: start-vms build/server_data.vdi
 	vagrant halt -f server
 	vagrant provision --provision-with install client
 	@mdel -ibuild/server.img@@1M ::/pairingkey 2>/dev/null || true
+	@dd conv=notrunc if=/dev/zero of=build/server.img seek=$$((0x100025)) count=1 bs=1 #FAT16 only!
 	vagrant ssh client -c '/vagrant/run_test.sh pc' &
-	@echo Waiting for pairingkey to show up...
+	@echo Waiting for client to finish writing image...
 	@while ! mdir -b -ibuild/server.img@@1M ::/pairingkey 2>/dev/null; do sleep 1; done
-#	XXX boot server.
-#	XXX Wait for test completion
+	@while ! hd -v -s 0x100025 -n 1 build/server.img | grep -q '^00100025  00'; do sleep 1; done
+#	vagrant up server
+	wait #for vagrant run run_test.sh
 #	XXX verify that preserve.txt contains "precious\n"
 
 server-serial:
