@@ -59,7 +59,7 @@ upload-macos: start-vms $(BOUNDERY_SSHCONF)
 	scp -F $(BOUNDERY_SSHCONF) $(CLIENT_SRC)/macOS/*.dmg \
 	  root@boundery.me:/root/data/sslnginx/html/clients/
 
-upload-pczip: start-vms
+upload-pczip: start-vms $(BOUNDERY_SSHCONF)
 	@test $(OS_SRC) || ( echo 'set OS_SRC' && false)
 	vagrant ssh boundery.me -c '[ -f /usr/local/share/ca-certificates/pebble.minica.crt ]'
 	make -C $(OS_SRC) pc_zip
@@ -67,7 +67,7 @@ upload-pczip: start-vms
 	scp -F $(BOUNDERY_SSHCONF) $(OS_SRC)/build/amd64/images/pc.zip \
 	  root@boundery.me:/root/data/sslnginx/html/images/
 
-upload-rpi3zip: start-vms
+upload-rpi3zip: start-vms $(BOUNDERY_SSHCONF)
 	@test $(OS_SRC) || ( echo 'set OS_SRC' && false)
 	vagrant ssh boundery.me -c '[ -f /usr/local/share/ca-certificates/pebble.minica.crt ]'
 	make -C $(OS_SRC) rpi3_zip
@@ -90,6 +90,7 @@ server-serial:
 	@script/vboxmgr controlvm server_VBOXID changeuartmode1 server build/serial_cons.sock
 	@echo "Ctrl-o to exit"
 	@socat UNIX-CONNECT:build/serial_cons.sock STDIO,raw,echo=0,escape=0x0f
+#	XXX Perhaps wire serial console back to file? Even better if socat also updates file...
 
 client-vnc:
 	@script/vboxmgr client_VBOXID

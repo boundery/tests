@@ -10,7 +10,7 @@ if [ -f /run/intercept.pid ]; then
     rm /run/intercept.pid
 fi
 python3 -u /usr/local/sbin/intercept.py --all-qtypes --tcp -u 10.0.2.3 \
-        -f '*.boundery.me:30.0.0.150' \
+        -f '*.boundery.me.:30.0.0.150' \
         -f 'boundery.me.:30.0.1.9' -f 'www.boundery.me.:30.0.1.9' \
         -i 'acme-v02.api.letsencrypt.org. 60 IN A 30.0.0.1' \
         -i 'acme-staging-v02.api.letsencrypt.org. 60 IN A 30.0.0.1' \

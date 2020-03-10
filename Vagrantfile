@@ -127,6 +127,11 @@ Vagrant.configure("2") do |config|
     client.vm.provision "install", type: "shell", run: "never", privileged: false, inline: <<-SHELL
       #XXX Sanity check fakedns, other environment stuff?
 
+      if mount | grep -q ^/dev/sdb1; then
+        echo "/dev/sdb1 already mounted!" >&2
+        exit 92
+      fi
+
       sudo /etc/rc.local #Refetch ssl root cert in case pebble restarted.
 
       rm -rf boundery-linux-client*

@@ -60,7 +60,7 @@ click_here = d.find_element_by_tag_name('a')
 click_here.click()
 
 #Step 3 (boundery.me)
-
+screenshot(d, 'step3')
 
 
 #XXX Because we short circuit the dyndns NS forward to the pi, need to explicitly
