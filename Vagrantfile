@@ -58,6 +58,11 @@ Vagrant.configure("2") do |config|
     boundery.vm.hostname = "boundery"
     boundery.vm.network "private_network", auto_config: false,
                         virtualbox__intnet: "boundery_inet"
+
+    config.trigger.after :destroy do |trigger|
+      trigger.run = {inline: "bash -c 'rm -f build/stamp/upload-*'"}
+    end
+
     boundery.vm.provision "shell", inline: <<-SHELL
       set -e
 
