@@ -16,18 +16,39 @@ build/server_data.vdi:
 	qemu-img convert -f vvfat -O vdi fat:32:build/empty $@
 	@VBoxManage internalcommands sethduuid $@ 11111111-99aa-0000-8899-aabbccddeeff
 
-.PHONY: start-vms
-start-vms: build/server.vmdk
-	vagrant up
+#XXX "set -e" in provisioners, and touch a provisioned stamp at the end. Fail the target if it is not there.
+#XXX Get deps right to reprovision VMs w/ files change?  Probably need explicit "provision" targets...
+
+#XXX Touch "VM running" stamps, and add vagrant triggers so destroy removes them.
+
+INET=build/.inet
+inet: $(INET)
+$(INET):
+	vagrant up inet
+
+BOUNDERY=build/.boundery
+boundery: $(BOUNDERY)
+$(BOUNDERY): $(INET)
+	vagrant up boundery.me
+
+ROUTER=build/.router
+router: $(ROUTER)
+$(ROUTER):
+	vagrant up router
+
+CLIENT=build/.client
+client: $(CLIENT)
+$(CLIENT): $(ROUTER) $(INET) build/server.vmdk
+	vagrant up client
 
 BOUNDERY_SSHCONF=build/boundery.sshconf
 boundery-sshconf: $(BOUNDERY_SSHCONF)
-$(BOUNDERY_SSHCONF): start-vms
+$(BOUNDERY_SSHCONF): $(BOUNDERY)
 	@mkdir -p build
 	@vagrant ssh-config boundery.me | grep -v User > $@
 	vagrant ssh boundery.me -c 'sudo cp -r .ssh /root/'
 
-upload-central: start-vms $(BOUNDERY_SSHCONF)
+upload-central: $(BOUNDERY) $(BOUNDERY_SSHCONF)
 	@test $(CENTRAL_SRC) || ( echo 'set CENTRAL_SRC' && false)
 	vagrant ssh boundery.me -c '[ -f /usr/local/share/ca-certificates/pebble.minica.crt ]'
 	vagrant upload $(CENTRAL_SRC)/setupserver /tmp/setupserver boundery.me
@@ -35,7 +56,7 @@ upload-central: start-vms $(BOUNDERY_SSHCONF)
 	SERVER=boundery.me SSH_CONF=`readlink -f $(BOUNDERY_SSHCONF)` make -C $(CENTRAL_SRC) deploy
 
 #XXX Change client/image uploads to use make deploy just like upload-central.
-upload-linux: start-vms $(BOUNDERY_SSHCONF)
+upload-linux: $(BOUNDERY) $(BOUNDERY_SSHCONF)
 	@test $(CLIENT_SRC) || ( echo 'set CLIENT_SRC' && false)
 	vagrant ssh boundery.me -c '[ -f /usr/local/share/ca-certificates/pebble.minica.crt ]'
 	make -C $(CLIENT_SRC) linux
@@ -43,7 +64,7 @@ upload-linux: start-vms $(BOUNDERY_SSHCONF)
 	scp -F $(BOUNDERY_SSHCONF) $(CLIENT_SRC)/linux/*.tar.gz \
 	  root@boundery.me:/root/data/sslnginx/html/clients/
 
-upload-windows: start-vms $(BOUNDERY_SSHCONF)
+upload-windows: $(BOUNDERY) $(BOUNDERY_SSHCONF)
 	@test $(CLIENT_SRC) || ( echo 'set CLIENT_SRC' && false)
 	vagrant ssh boundery.me -c '[ -f /usr/local/share/ca-certificates/pebble.minica.crt ]'
 	make -C $(CLIENT_SRC) windows
@@ -51,7 +72,7 @@ upload-windows: start-vms $(BOUNDERY_SSHCONF)
 	scp -F $(BOUNDERY_SSHCONF) $(CLIENT_SRC)/windows/*.msi \
 	  root@boundery.me:/root/data/sslnginx/html/clients/
 
-upload-macos: start-vms $(BOUNDERY_SSHCONF)
+upload-macos: $(BOUNDERY) $(BOUNDERY_SSHCONF)
 	@test $(CLIENT_SRC) || ( echo 'set CLIENT_SRC' && false)
 	vagrant ssh boundery.me -c '[ -f /usr/local/share/ca-certificates/pebble.minica.crt ]'
 	make -C $(CLIENT_SRC) macos
@@ -59,7 +80,7 @@ upload-macos: start-vms $(BOUNDERY_SSHCONF)
 	scp -F $(BOUNDERY_SSHCONF) $(CLIENT_SRC)/macOS/*.dmg \
 	  root@boundery.me:/root/data/sslnginx/html/clients/
 
-upload-pczip: start-vms $(BOUNDERY_SSHCONF)
+upload-pczip: $(BOUNDERY) $(BOUNDERY_SSHCONF)
 	@test $(OS_SRC) || ( echo 'set OS_SRC' && false)
 	vagrant ssh boundery.me -c '[ -f /usr/local/share/ca-certificates/pebble.minica.crt ]'
 	make -C $(OS_SRC) pc_zip
@@ -67,7 +88,7 @@ upload-pczip: start-vms $(BOUNDERY_SSHCONF)
 	scp -F $(BOUNDERY_SSHCONF) $(OS_SRC)/build/amd64/images/pc.zip \
 	  root@boundery.me:/root/data/sslnginx/html/images/
 
-upload-rpi3zip: start-vms $(BOUNDERY_SSHCONF)
+upload-rpi3zip: $(BOUNDERY) $(BOUNDERY_SSHCONF)
 	@test $(OS_SRC) || ( echo 'set OS_SRC' && false)
 	vagrant ssh boundery.me -c '[ -f /usr/local/share/ca-certificates/pebble.minica.crt ]'
 	make -C $(OS_SRC) rpi3_zip
@@ -75,7 +96,8 @@ upload-rpi3zip: start-vms $(BOUNDERY_SSHCONF)
 	scp -F $(BOUNDERY_SSHCONF) $(OS_SRC)/build/arm64/images/rpi3.zip \
 	  root@boundery.me:/root/data/sslnginx/html/images/
 
-test-linux-pczip: start-vms build/server_data.vdi
+#XXX Make this depend on a stamp that pczip/linux/central are uploaded...
+test-linux-pczip: $(CLIENT) $(BOUNDERY) build/server_data.vdi
 	vagrant halt -f server
 	vagrant provision --provision-with install client
 	@mdel -ibuild/server.img@@1M ::/pairingkey 2>/dev/null || true
