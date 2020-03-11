@@ -132,6 +132,7 @@ Vagrant.configure("2") do |config|
         exit 92
       fi
 
+      #XXX It is probably OK to just do this at boot time...
       sudo /etc/rc.local #Refetch ssl root cert in case pebble restarted.
 
       rm -rf boundery-linux-client*

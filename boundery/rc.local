@@ -2,3 +2,12 @@
 
 #/etc/dhcp/dhclient-enter-hooks.d/nodnsupdate protects this from eth0 dhcp renew.
 echo "nameserver 30.0.1.1" > /etc/resolv.conf
+
+#Need to renew our cert, in case pebble restarted.
+if which docker &>/dev/null; then
+    while [ -z "`docker ps -q -f name=root_sslnginx_1`" ]; do
+        sleep 1
+    done
+    rm -rf /root/data/sslnginx/letsencrypt/{a*,c*,k*,l*,r*}
+    docker exec root_sslnginx_1 bash -c 'certbot certonly --webroot --webroot-path /usr/share/nginx/html -n --agree-tos -m letsencrypt@sigbus.net -d boundery.me -d www.boundery.me && pkill -HUP nginx'
+fi
