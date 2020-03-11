@@ -1,6 +1,6 @@
 #!/bin/bash
 
-rm /usr/local/share/ca-certificates/fakeroot.crt
+rm -f /usr/local/share/ca-certificates/fakeroot.crt
 while [ ! -f /usr/local/share/ca-certificates/fakeroot.crt ]; do
     wget --timeout 3 --no-check-certificate https://acme-v02.api.letsencrypt.org:15000/roots/0 -O /usr/local/share/ca-certificates/fakeroot.crt
 done

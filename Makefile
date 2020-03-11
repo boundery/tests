@@ -16,30 +16,35 @@ build/server_data.vdi:
 	qemu-img convert -f vvfat -O vdi fat:32:build/empty $@
 	@VBoxManage internalcommands sethduuid $@ 11111111-99aa-0000-8899-aabbccddeeff
 
-#XXX "set -e" in provisioners, and touch a provisioned stamp at the end. Fail the target if it is not there.
 #XXX Get deps right to reprovision VMs w/ files change?  Probably need explicit "provision" targets...
 
-#XXX Touch "VM running" stamps, and add vagrant triggers so destroy removes them.
-
-INET=build/.inet
+INET=build/stamp/inet
 inet: $(INET)
 $(INET):
+	@mkdir -p build/stamp
 	vagrant up inet
+	@test -f $@ || ( echo "provisioning $(notdir $@) failed" && false )
 
-BOUNDERY=build/.boundery
+BOUNDERY=build/stamp/boundery.me
 boundery: $(BOUNDERY)
 $(BOUNDERY): $(INET)
+	@mkdir -p build/stamp
 	vagrant up boundery.me
+	@test -f $@ || ( echo "provisioning $(notdir $@) failed" && false )
 
-ROUTER=build/.router
+ROUTER=build/stamp/router
 router: $(ROUTER)
 $(ROUTER):
+	@mkdir -p build/stamp
 	vagrant up router
+	@test -f $@ || ( echo "provisioning $(notdir $@) failed" && false )
 
-CLIENT=build/.client
+CLIENT=build/stamp/client
 client: $(CLIENT)
 $(CLIENT): $(ROUTER) $(INET) build/server.vmdk
+	@mkdir -p build/stamp
 	vagrant up client
+	@test -f $@ || ( echo "provisioning $(notdir $@) failed" && false )
 
 BOUNDERY_SSHCONF=build/boundery.sshconf
 boundery-sshconf: $(BOUNDERY_SSHCONF)
@@ -49,7 +54,7 @@ $(BOUNDERY_SSHCONF): $(BOUNDERY)
 	vagrant ssh boundery.me -c 'sudo cp -r .ssh /root/'
 
 upload-central: $(BOUNDERY) $(BOUNDERY_SSHCONF)
-	@test $(CENTRAL_SRC) || ( echo 'set CENTRAL_SRC' && false)
+	@test $(CENTRAL_SRC) || ( echo 'set CENTRAL_SRC' && false )
 	vagrant ssh boundery.me -c '[ -f /usr/local/share/ca-certificates/pebble.minica.crt ]'
 	vagrant upload $(CENTRAL_SRC)/setupserver /tmp/setupserver boundery.me
 	vagrant ssh boundery.me -c 'echo fakepasswd | sudo /tmp/setupserver'
@@ -57,7 +62,7 @@ upload-central: $(BOUNDERY) $(BOUNDERY_SSHCONF)
 
 #XXX Change client/image uploads to use make deploy just like upload-central.
 upload-linux: $(BOUNDERY) $(BOUNDERY_SSHCONF)
-	@test $(CLIENT_SRC) || ( echo 'set CLIENT_SRC' && false)
+	@test $(CLIENT_SRC) || ( echo 'set CLIENT_SRC' && false )
 	vagrant ssh boundery.me -c '[ -f /usr/local/share/ca-certificates/pebble.minica.crt ]'
 	make -C $(CLIENT_SRC) linux
 	vagrant ssh boundery.me -c 'sudo mkdir -p /root/data/sslnginx/html/clients'
@@ -65,7 +70,7 @@ upload-linux: $(BOUNDERY) $(BOUNDERY_SSHCONF)
 	  root@boundery.me:/root/data/sslnginx/html/clients/
 
 upload-windows: $(BOUNDERY) $(BOUNDERY_SSHCONF)
-	@test $(CLIENT_SRC) || ( echo 'set CLIENT_SRC' && false)
+	@test $(CLIENT_SRC) || ( echo 'set CLIENT_SRC' && false )
 	vagrant ssh boundery.me -c '[ -f /usr/local/share/ca-certificates/pebble.minica.crt ]'
 	make -C $(CLIENT_SRC) windows
 	vagrant ssh boundery.me -c 'sudo mkdir -p /root/data/sslnginx/html/clients'
@@ -73,7 +78,7 @@ upload-windows: $(BOUNDERY) $(BOUNDERY_SSHCONF)
 	  root@boundery.me:/root/data/sslnginx/html/clients/
 
 upload-macos: $(BOUNDERY) $(BOUNDERY_SSHCONF)
-	@test $(CLIENT_SRC) || ( echo 'set CLIENT_SRC' && false)
+	@test $(CLIENT_SRC) || ( echo 'set CLIENT_SRC' && false )
 	vagrant ssh boundery.me -c '[ -f /usr/local/share/ca-certificates/pebble.minica.crt ]'
 	make -C $(CLIENT_SRC) macos
 	vagrant ssh boundery.me -c 'sudo mkdir -p /root/data/sslnginx/html/clients'
@@ -81,7 +86,7 @@ upload-macos: $(BOUNDERY) $(BOUNDERY_SSHCONF)
 	  root@boundery.me:/root/data/sslnginx/html/clients/
 
 upload-pczip: $(BOUNDERY) $(BOUNDERY_SSHCONF)
-	@test $(OS_SRC) || ( echo 'set OS_SRC' && false)
+	@test $(OS_SRC) || ( echo 'set OS_SRC' && false )
 	vagrant ssh boundery.me -c '[ -f /usr/local/share/ca-certificates/pebble.minica.crt ]'
 	make -C $(OS_SRC) pc_zip
 	vagrant ssh boundery.me -c 'sudo mkdir -p /root/data/sslnginx/html/images'
@@ -89,7 +94,7 @@ upload-pczip: $(BOUNDERY) $(BOUNDERY_SSHCONF)
 	  root@boundery.me:/root/data/sslnginx/html/images/
 
 upload-rpi3zip: $(BOUNDERY) $(BOUNDERY_SSHCONF)
-	@test $(OS_SRC) || ( echo 'set OS_SRC' && false)
+	@test $(OS_SRC) || ( echo 'set OS_SRC' && false )
 	vagrant ssh boundery.me -c '[ -f /usr/local/share/ca-certificates/pebble.minica.crt ]'
 	make -C $(OS_SRC) rpi3_zip
 	vagrant ssh boundery.me -c 'sudo mkdir -p /root/data/sslnginx/html/images'

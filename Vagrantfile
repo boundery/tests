@@ -12,6 +12,12 @@ Vagrant.configure("2") do |config|
     vb.linked_clone = true
   end
 
+  config.trigger.after :destroy do |trigger|
+    trigger.ruby do |env, machine|
+      `rm -f build/stamp/#{machine.name}`
+    end
+  end
+
   ################# SIMULATED INTERNET #################
   config.vm.define "inet" do |inet|
     inet.vm.hostname = "inet"
@@ -20,6 +26,8 @@ Vagrant.configure("2") do |config|
     inet.vm.network "private_network", ip: "30.0.1.1",
                     virtualbox__intnet: "boundery_inet"
     inet.vm.provision "shell", inline: <<-SHELL
+      set -e
+
       sudo apt-get update
       sudo apt-get install -y --no-install-recommends python3-dnslib dnsutils socat netsed
 
@@ -28,12 +36,6 @@ Vagrant.configure("2") do |config|
 
       sudo cp /vagrant/inet/intercept.py /usr/local/sbin/
 
-      #https://github.com/hal/testsuite.next/blob/master/how-run-pebble.md
-      #docker run --rm -it -v `pwd`:/output modedemploi/minica \
-      #  -ca-cert pebble.minica.pem -ca-key pebble.minica.key.pem \
-      #  -domains acme-v02.api.letsencrypt.org,acme-staging-v02.api.letsencrypt.org,localhost \
-      #  -ip-addresses 30.0.0.1,30.0.1.1,127.0.0.1
-      #sudo chown -R ...
       if ! [ -x /usr/local/sbin/pebble ]; then
         sudo wget https://github.com/letsencrypt/pebble/releases/download/v2.3.0/pebble_linux-amd64 -O /usr/local/sbin/pebble
         sudo chmod a+x /usr/local/sbin/pebble
@@ -46,6 +48,8 @@ Vagrant.configure("2") do |config|
       sudo cp /vagrant/inet/rc.local /etc/
       sudo chmod a+x /etc/rc.local
       sudo /etc/rc.local
+
+      touch /vagrant/build/stamp/inet
     SHELL
   end
 
@@ -55,6 +59,8 @@ Vagrant.configure("2") do |config|
     boundery.vm.network "private_network", auto_config: false,
                         virtualbox__intnet: "boundery_inet"
     boundery.vm.provision "shell", inline: <<-SHELL
+      set -e
+
       sudo cp /vagrant/boundery/nodnsupdate /etc/dhcp/dhclient-enter-hooks.d/
       sudo chmod a+x /etc/dhcp/dhclient-enter-hooks.d/nodnsupdate
 
@@ -70,6 +76,8 @@ Vagrant.configure("2") do |config|
       sudo cp /vagrant/boundery/rc.local /etc/
       sudo chmod a+x /etc/rc.local
       sudo /etc/rc.local
+
+      touch /vagrant/build/stamp/boundery.me
     SHELL
   end
 
@@ -81,6 +89,8 @@ Vagrant.configure("2") do |config|
     router.vm.network "private_network", auto_config: false,
                       virtualbox__intnet: "router_inet"
     router.vm.provision "shell", inline: <<-SHELL
+      set -e
+
       sudo apt-get update
       sudo DEBIAN_FRONTEND=noninteractive apt-get install -y dnsmasq iptables-persistent
 
@@ -92,6 +102,8 @@ Vagrant.configure("2") do |config|
 
       sudo cp /vagrant/router/dhcp.conf /vagrant/router/dns.conf /etc/dnsmasq.d/
       sudo /etc/init.d/dnsmasq restart
+
+      touch /vagrant/build/stamp/router
     SHELL
   end
 
@@ -111,6 +123,8 @@ Vagrant.configure("2") do |config|
     client.vm.network "forwarded_port", host: 5900, guest: 5900
     client.vm.network "forwarded_port", host: 22222, guest: 22222
     client.vm.provision "shell", inline: <<-SHELL
+      set -e
+
       sudo apt-get update
       #XXX We install python3-cffi-backend here due to a briefcase bug. bug 44?
       sudo apt-get install -y --no-install-recommends network-manager xvfb x11vnc \
@@ -122,9 +136,13 @@ Vagrant.configure("2") do |config|
       sudo cp /vagrant/client/rc.local /etc/
       sudo chmod a+x /etc/rc.local
       sudo /etc/rc.local
+
+      touch /vagrant/build/stamp/client
     SHELL
 
     client.vm.provision "install", type: "shell", run: "never", privileged: false, inline: <<-SHELL
+      set -e
+
       #XXX Sanity check fakedns, other environment stuff?
 
       if mount | grep -q ^/dev/sdb1; then
