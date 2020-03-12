@@ -12,9 +12,14 @@ Vagrant.configure("2") do |config|
     vb.linked_clone = true
   end
 
-  config.trigger.after :destroy do |trigger|
+  config.trigger.after :destroy, :halt, :suspend do |trigger|
     trigger.ruby do |env, machine|
       `rm -f build/stamp/#{machine.name}`
+    end
+  end
+  config.trigger.after :destroy do |trigger|
+    trigger.ruby do |env, machine|
+      `rm -f build/stamp/#{machine.name}.prov`
     end
   end
 
@@ -49,7 +54,7 @@ Vagrant.configure("2") do |config|
       sudo chmod a+x /etc/rc.local
       sudo /etc/rc.local
 
-      touch /vagrant/build/stamp/inet
+      touch /vagrant/build/stamp/inet.prov
     SHELL
   end
 
@@ -82,7 +87,7 @@ Vagrant.configure("2") do |config|
       sudo chmod a+x /etc/rc.local
       sudo /etc/rc.local
 
-      touch /vagrant/build/stamp/boundery.me
+      touch /vagrant/build/stamp/boundery.me.prov
     SHELL
   end
 
@@ -108,7 +113,7 @@ Vagrant.configure("2") do |config|
       sudo cp /vagrant/router/dhcp.conf /vagrant/router/dns.conf /etc/dnsmasq.d/
       sudo /etc/init.d/dnsmasq restart
 
-      touch /vagrant/build/stamp/router
+      touch /vagrant/build/stamp/router.prov
     SHELL
   end
 
@@ -142,7 +147,7 @@ Vagrant.configure("2") do |config|
       sudo chmod a+x /etc/rc.local
       sudo /etc/rc.local
 
-      touch /vagrant/build/stamp/client
+      touch /vagrant/build/stamp/client.prov
     SHELL
 
     client.vm.provision "install", type: "shell", run: "never", privileged: false, inline: <<-SHELL

@@ -7,8 +7,8 @@ build/server.img:
 	mformat -i$@@@1M -s32 -h64 -t$(IMG_SIZE) -v"BNDRY TEST"
 	@echo "precious" > build/preserve.txt
 	mcopy -i$@@@1M build/preserve.txt ::
-build/server.vmdk: build/server.img
-	[ -f $@ ] || VBoxManage internalcommands createrawvmdk -filename $@ -rawdisk `readlink -f $<`
+build/server.vmdk: | build/server.img
+	[ -f $@ ] || VBoxManage internalcommands createrawvmdk -filename $@ -rawdisk `readlink -f $< $|`
 	@VBoxManage internalcommands sethduuid $@ 00000000-99aa-0000-8899-aabbccddeeff
 
 build/server_data.vdi:
@@ -16,46 +16,73 @@ build/server_data.vdi:
 	qemu-img convert -f vvfat -O vdi fat:32:build/empty $@
 	@VBoxManage internalcommands sethduuid $@ 11111111-99aa-0000-8899-aabbccddeeff
 
-#XXX Get deps right to reprovision VMs w/ files change?  Probably need explicit "provision" targets...
-
 INET=build/stamp/inet
 inet: $(INET)
 $(INET):
 	@mkdir -p build/stamp
-	vagrant up inet
-	@test -f $@ || ( echo "provisioning $(notdir $@) failed" && false )
+	vagrant up --no-provision inet
+	@vagrant ssh inet -c '[ ! -x /usr/local/sbin/pebble ] || while ! pidof -q pebble; do sleep 1; done'
+	@touch $@
 
 BOUNDERY=build/stamp/boundery.me
 boundery: $(BOUNDERY)
-$(BOUNDERY): $(INET)
+$(BOUNDERY): | $(INET)
 	@mkdir -p build/stamp
-	vagrant up boundery.me
-	@test -f $@ || ( echo "provisioning $(notdir $@) failed" && false )
+	vagrant up --no-provision boundery.me
+	@touch $@
 
 ROUTER=build/stamp/router
 router: $(ROUTER)
 $(ROUTER):
 	@mkdir -p build/stamp
-	vagrant up router
-	@test -f $@ || ( echo "provisioning $(notdir $@) failed" && false )
+	vagrant up --no-provision router
+	@touch $@
 
 CLIENT=build/stamp/client
 client: $(CLIENT)
-$(CLIENT): $(ROUTER) $(INET) build/server.vmdk
+$(CLIENT): | build/server.vmdk $(ROUTER) $(INET)
 	@mkdir -p build/stamp
-	vagrant up client
-	@test -f $@ || ( echo "provisioning $(notdir $@) failed" && false )
+	vagrant up --no-provision client
+	@touch $@
+
+INET_PROV=build/stamp/inet.prov
+inet-prov: $(INET_PROV)
+$(INET_PROV): inet/* | $(INET)
+	@mkdir -p build/stamp
+	vagrant provision inet
+	@test -f $@ || ( echo "provisioning $(basename $(notdir $@)) failed" && false )
+
+BOUNDERY_PROV=build/stamp/boundery.me.prov
+boundery-prov: $(BOUNDERY_PROV)
+$(BOUNDERY_PROV): boundery/* | $(BOUNDERY) $(INET_PROV)
+	@mkdir -p build/stamp
+	vagrant provision boundery.me
+	@test -f $@ || ( echo "provisioning $(basename $(notdir $@)) failed" && false )
+
+ROUTER_PROV=build/stamp/router.prov
+router-prov: $(ROUTER_PROV)
+$(ROUTER_PROV): router/* | $(ROUTER)
+	@mkdir -p build/stamp
+	vagrant provision router
+	@test -f $@ || ( echo "provisioning $(basename $(notdir $@)) failed" && false )
+
+CLIENT_PROV=build/stamp/client.prov
+client-prov: $(CLIENT_PROV)
+$(CLIENT_PROV): client/* | $(CLIENT) $(ROUTER_PROV) $(INET_PROV)
+	@mkdir -p build/stamp
+	vagrant provision client
+	@test -f $@ || ( echo "provisioning $(basename $(notdir $@)) failed" && false )
 
 BOUNDERY_SSHCONF=build/boundery.sshconf
 boundery-sshconf: $(BOUNDERY_SSHCONF)
-$(BOUNDERY_SSHCONF): $(BOUNDERY)
+$(BOUNDERY_SSHCONF): $(BOUNDERY_PROV)
 	@mkdir -p build
 	@vagrant ssh-config boundery.me | grep -v User > $@
 	vagrant ssh boundery.me -c 'sudo cp -r .ssh /root/'
 
 UPLOAD_CENTRAL=build/stamp/upload-central
 upload-central: $(UPLOAD_CENTRAL)
-$(UPLOAD_CENTRAL): $(BOUNDERY) $(BOUNDERY_SSHCONF)
+$(UPLOAD_CENTRAL): $(BOUNDERY_PROV) | $(BOUNDERY_SSHCONF)
 	@test $(CENTRAL_SRC) || ( echo 'set CENTRAL_SRC' && false )
 	vagrant ssh boundery.me -c '[ -f /usr/local/share/ca-certificates/pebble.minica.crt ]'
 	vagrant upload $(CENTRAL_SRC)/setupserver /tmp/setupserver boundery.me
@@ -69,7 +96,7 @@ $(UPLOAD_CENTRAL): $(BOUNDERY) $(BOUNDERY_SSHCONF)
 #XXX Change client/image uploads to use make deploy just like upload-central.
 UPLOAD_LINUX=build/stamp/upload-linux
 upload-linux: $(UPLOAD_LINUX)
-$(UPLOAD_LINUX): $(BOUNDERY) $(BOUNDERY_SSHCONF)
+$(UPLOAD_LINUX): $(BOUNDERY_PROV) | $(BOUNDERY_SSHCONF)
 	@test $(CLIENT_SRC) || ( echo 'set CLIENT_SRC' && false )
 	vagrant ssh boundery.me -c '[ -f /usr/local/share/ca-certificates/pebble.minica.crt ]'
 	make -C $(CLIENT_SRC) linux
@@ -80,7 +107,7 @@ $(UPLOAD_LINUX): $(BOUNDERY) $(BOUNDERY_SSHCONF)
 
 UPLOAD_WINDOWS=build/stamp/upload-windows
 upload-windows: $(UPLOAD_WINDOWS)
-$(UPLOAD_WINDOWS): $(BOUNDERY) $(BOUNDERY_SSHCONF)
+$(UPLOAD_WINDOWS): $(BOUNDERY_PROV) | $(BOUNDERY_SSHCONF)
 	@test $(CLIENT_SRC) || ( echo 'set CLIENT_SRC' && false )
 	vagrant ssh boundery.me -c '[ -f /usr/local/share/ca-certificates/pebble.minica.crt ]'
 	make -C $(CLIENT_SRC) windows
@@ -91,7 +118,7 @@ $(UPLOAD_WINDOWS): $(BOUNDERY) $(BOUNDERY_SSHCONF)
 
 UPLOAD_MACOS=build/stamp/upload-macos
 upload-macos: $(UPLOAD_MACOS)
-$(UPLOAD_MACOS): $(BOUNDERY) $(BOUNDERY_SSHCONF)
+$(UPLOAD_MACOS): $(BOUNDERY_PROV) | $(BOUNDERY_SSHCONF)
 	@test $(CLIENT_SRC) || ( echo 'set CLIENT_SRC' && false )
 	vagrant ssh boundery.me -c '[ -f /usr/local/share/ca-certificates/pebble.minica.crt ]'
 	make -C $(CLIENT_SRC) macos
@@ -102,7 +129,7 @@ $(UPLOAD_MACOS): $(BOUNDERY) $(BOUNDERY_SSHCONF)
 
 UPLOAD_PCZIP=build/stamp/upload-pczip
 upload-pczip: $(UPLOAD_PCZIP)
-$(UPLOAD_PCZIP): $(BOUNDERY) $(BOUNDERY_SSHCONF)
+$(UPLOAD_PCZIP): $(BOUNDERY_PROV) | $(BOUNDERY_SSHCONF)
 	@test $(OS_SRC) || ( echo 'set OS_SRC' && false )
 	vagrant ssh boundery.me -c '[ -f /usr/local/share/ca-certificates/pebble.minica.crt ]'
 	make -C $(OS_SRC) pc_zip
@@ -113,7 +140,7 @@ $(UPLOAD_PCZIP): $(BOUNDERY) $(BOUNDERY_SSHCONF)
 
 UPLOAD_RPI3ZIP=build/stamp/upload-rpi3zip
 upload-rpi3zip: $(UPLOAD_RPI3ZIP)
-$(UPLOAD_RPI3ZIP): $(BOUNDERY) $(BOUNDERY_SSHCONF)
+$(UPLOAD_RPI3ZIP): $(BOUNDERY_PROV) | $(BOUNDERY_SSHCONF)
 	@test $(OS_SRC) || ( echo 'set OS_SRC' && false )
 	vagrant ssh boundery.me -c '[ -f /usr/local/share/ca-certificates/pebble.minica.crt ]'
 	make -C $(OS_SRC) rpi3_zip
@@ -122,7 +149,7 @@ $(UPLOAD_RPI3ZIP): $(BOUNDERY) $(BOUNDERY_SSHCONF)
 	  root@boundery.me:/root/data/sslnginx/html/images/
 	@touch $@
 
-test-linux-pczip: $(CLIENT) $(BOUNDERY) build/server_data.vdi $(UPLOAD_CENTRAL) $(UPLOAD_PCZIP) $(UPLOAD_LINUX)
+test-linux-pczip: $(CLIENT_PROV) $(BOUNDERY_PROV) $(UPLOAD_CENTRAL) $(UPLOAD_PCZIP) $(UPLOAD_LINUX) build/server_data.vdi
 	vagrant halt -f server
 	vagrant provision --provision-with install client
 	@mdel -ibuild/server.img@@1M ::/pairingkey 2>/dev/null || true
