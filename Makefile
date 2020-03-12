@@ -82,7 +82,7 @@ $(BOUNDERY_SSHCONF): $(BOUNDERY_PROV)
 
 UPLOAD_CENTRAL=build/stamp/upload-central
 upload-central: $(UPLOAD_CENTRAL)
-$(UPLOAD_CENTRAL): $(BOUNDERY_PROV) | $(BOUNDERY_SSHCONF)
+$(UPLOAD_CENTRAL): $(shell git -C $(CENTRAL_SRC) ls-files | sed "s,^,$(CENTRAL_SRC)/,") $(BOUNDERY_PROV) | $(BOUNDERY_SSHCONF)
 	@test $(CENTRAL_SRC) || ( echo 'set CENTRAL_SRC' && false )
 	vagrant ssh boundery.me -c '[ -f /usr/local/share/ca-certificates/pebble.minica.crt ]'
 	vagrant upload $(CENTRAL_SRC)/setupserver /tmp/setupserver boundery.me
@@ -96,7 +96,7 @@ $(UPLOAD_CENTRAL): $(BOUNDERY_PROV) | $(BOUNDERY_SSHCONF)
 #XXX Change client/image uploads to use make deploy just like upload-central.
 UPLOAD_LINUX=build/stamp/upload-linux
 upload-linux: $(UPLOAD_LINUX)
-$(UPLOAD_LINUX): $(BOUNDERY_PROV) | $(BOUNDERY_SSHCONF)
+$(UPLOAD_LINUX): $(shell git -C $(CLIENT_SRC) ls-files | sed "s,^,$(CLIENT_SRC)/,") $(BOUNDERY_PROV) | $(BOUNDERY_SSHCONF)
 	@test $(CLIENT_SRC) || ( echo 'set CLIENT_SRC' && false )
 	vagrant ssh boundery.me -c '[ -f /usr/local/share/ca-certificates/pebble.minica.crt ]'
 	make -C $(CLIENT_SRC) linux
@@ -107,7 +107,7 @@ $(UPLOAD_LINUX): $(BOUNDERY_PROV) | $(BOUNDERY_SSHCONF)
 
 UPLOAD_WINDOWS=build/stamp/upload-windows
 upload-windows: $(UPLOAD_WINDOWS)
-$(UPLOAD_WINDOWS): $(BOUNDERY_PROV) | $(BOUNDERY_SSHCONF)
+$(UPLOAD_WINDOWS): $(shell git -C $(CLIENT_SRC) ls-files | sed "s,^,$(CLIENT_SRC)/,") $(BOUNDERY_PROV) | $(BOUNDERY_SSHCONF)
 	@test $(CLIENT_SRC) || ( echo 'set CLIENT_SRC' && false )
 	vagrant ssh boundery.me -c '[ -f /usr/local/share/ca-certificates/pebble.minica.crt ]'
 	make -C $(CLIENT_SRC) windows
@@ -118,7 +118,7 @@ $(UPLOAD_WINDOWS): $(BOUNDERY_PROV) | $(BOUNDERY_SSHCONF)
 
 UPLOAD_MACOS=build/stamp/upload-macos
 upload-macos: $(UPLOAD_MACOS)
-$(UPLOAD_MACOS): $(BOUNDERY_PROV) | $(BOUNDERY_SSHCONF)
+$(UPLOAD_MACOS): $(shell git -C $(CLIENT_SRC) ls-files | sed "s,^,$(CLIENT_SRC)/,") $(BOUNDERY_PROV) | $(BOUNDERY_SSHCONF)
 	@test $(CLIENT_SRC) || ( echo 'set CLIENT_SRC' && false )
 	vagrant ssh boundery.me -c '[ -f /usr/local/share/ca-certificates/pebble.minica.crt ]'
 	make -C $(CLIENT_SRC) macos
@@ -129,7 +129,7 @@ $(UPLOAD_MACOS): $(BOUNDERY_PROV) | $(BOUNDERY_SSHCONF)
 
 UPLOAD_PCZIP=build/stamp/upload-pczip
 upload-pczip: $(UPLOAD_PCZIP)
-$(UPLOAD_PCZIP): $(BOUNDERY_PROV) | $(BOUNDERY_SSHCONF)
+$(UPLOAD_PCZIP): $(shell git -C $(OS_SRC) ls-files | sed "s,^,$(OS_SRC)/,") $(BOUNDERY_PROV) | $(BOUNDERY_SSHCONF)
 	@test $(OS_SRC) || ( echo 'set OS_SRC' && false )
 	vagrant ssh boundery.me -c '[ -f /usr/local/share/ca-certificates/pebble.minica.crt ]'
 	make -C $(OS_SRC) pc_zip
@@ -140,7 +140,7 @@ $(UPLOAD_PCZIP): $(BOUNDERY_PROV) | $(BOUNDERY_SSHCONF)
 
 UPLOAD_RPI3ZIP=build/stamp/upload-rpi3zip
 upload-rpi3zip: $(UPLOAD_RPI3ZIP)
-$(UPLOAD_RPI3ZIP): $(BOUNDERY_PROV) | $(BOUNDERY_SSHCONF)
+$(UPLOAD_RPI3ZIP): $(shell git -C $(OS_SRC) ls-files | sed "s,^,$(OS_SRC)/,") $(BOUNDERY_PROV) | $(BOUNDERY_SSHCONF)
 	@test $(OS_SRC) || ( echo 'set OS_SRC' && false )
 	vagrant ssh boundery.me -c '[ -f /usr/local/share/ca-certificates/pebble.minica.crt ]'
 	make -C $(OS_SRC) rpi3_zip
