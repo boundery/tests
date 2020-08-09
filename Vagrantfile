@@ -119,7 +119,7 @@ Vagrant.configure("2") do |config|
 
   ################# CLIENT #################
   config.vm.define "client" do |client|
-    config.vm.provider "virtualbox" do |vb|
+    client.vm.provider "virtualbox" do |vb|
       vb.memory = "1024"
 
       vb.customize ['storageattach', :id, '--storagectl', 'SATA Controller', '--port', 1, '--device', 0,
@@ -179,8 +179,8 @@ Vagrant.configure("2") do |config|
 
   ################# HOME SERVER #################
   config.vm.define "server", autostart: false do |server|
-    config.vm.box = "sridhav/empty"
-    config.vm.provider "virtualbox" do |vb|
+    server.vm.box = "sridhav/empty"
+    server.vm.provider "virtualbox" do |vb|
       #vb.gui = true
       vb.linked_clone = false
       vb.memory = "1024"
