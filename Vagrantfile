@@ -131,7 +131,7 @@ Vagrant.configure("2") do |config|
     client.vm.hostname = "client"
     client.vm.network "private_network",
                       virtualbox__intnet: "client_router", type: "dhcp"
-    client.vm.network "forwarded_port", host: 5900, guest: 5900
+    client.vm.network "forwarded_port", host: 5910, guest: 5900
     client.vm.network "forwarded_port", host: 22222, guest: 22222
     client.vm.provision "shell", inline: <<-SHELL
       set -e

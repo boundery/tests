@@ -174,4 +174,4 @@ server-serial:
 #	XXX Perhaps wire serial console back to file? Even better if socat also updates file...
 
 client-vnc:
-	gvncviewer localhost:0
+	gvncviewer localhost:10
