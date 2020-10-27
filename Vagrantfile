@@ -35,11 +35,12 @@ Vagrant.configure("2") do |config|
 
       sudo apt-get update
       sudo apt-get install -y --no-install-recommends python3-dnslib dnsutils socat netsed
+      sudo apt purge -y 'exim4-*'
 
       sudo cp /vagrant/boundery/nodnsupdate /etc/dhcp/dhclient-enter-hooks.d/
       sudo chmod a+x /etc/dhcp/dhclient-enter-hooks.d/nodnsupdate
 
-      sudo cp /vagrant/inet/intercept.py /usr/local/sbin/
+      sudo cp /vagrant/inet/intercept.py /vagrant/inet/fake_smtpd.py /usr/local/sbin/
 
       if ! [ -x /usr/local/sbin/pebble ]; then
         sudo wget https://github.com/letsencrypt/pebble/releases/download/v2.3.0/pebble_linux-amd64 -O /usr/local/sbin/pebble
@@ -81,7 +82,7 @@ Vagrant.configure("2") do |config|
       sudo update-ca-certificates
 
       sudo mkdir -p /root/data/centralui
-      sudo cp /vagrant/boundery/email.json /vagrant/boundery/recaptcha.json /root/data/centralui/
+      sudo cp /vagrant/boundery/email.json /root/data/centralui/
 
       sudo cp /vagrant/boundery/rc.local /etc/
       sudo chmod a+x /etc/rc.local
@@ -135,17 +136,28 @@ Vagrant.configure("2") do |config|
     client.vm.provision "shell", inline: <<-SHELL
       set -e
 
+      sudo apt-key add /vagrant/client/zt-gpg-key
+      sudo cp /vagrant/client/zt.list /etc/apt/sources.list.d/zt.list
       sudo apt-get update
       #XXX We install python3-cffi-backend here due to a briefcase bug. bug 44?
       sudo apt-get install -y --no-install-recommends network-manager xvfb x11vnc \
            python3-selenium chromium-driver chromium-sandbox libnss3-tools \
-           python3-cffi-backend python3-paramiko
+           python3-cffi-backend python3-paramiko zerotier-one
 
       sudo cp /vagrant/fake_vagrant_sshd.py /usr/local/sbin/
 
+      while ! ip addr show dev eth1 | grep -q 'inet 192[.]168[.]1[.]'; do
+        sleep 1
+      done
+
+      if ! host acme-v02.api.letsencrypt.org | grep -q 'address 30[.]0[.]'; then
+        echo "acme points to the real addr, host DNS leaking in?" >&2
+        exit 91
+      fi
+
       sudo cp /vagrant/client/rc.local /etc/
       sudo chmod a+x /etc/rc.local
-      sudo /etc/rc.local
+      sudo /etc/rc.local #XXX Need to wait for local network before here.
 
       touch /vagrant/build/stamp/client.prov
     SHELL
@@ -153,7 +165,10 @@ Vagrant.configure("2") do |config|
     client.vm.provision "install", type: "shell", run: "never", privileged: false, inline: <<-SHELL
       set -e
 
-      #XXX Sanity check fakedns, other environment stuff?
+      if ! host acme-v02.api.letsencrypt.org | grep -q 'address 30[.]0[.]'; then
+        echo "acme points to the real addr, host DNS leaking in?" >&2
+        exit 91
+      fi
 
       if mount | grep -q ^/dev/sdb1; then
         echo "/dev/sdb1 already mounted!" >&2
@@ -168,10 +183,9 @@ Vagrant.configure("2") do |config|
       cp /etc/ssl/certs/ca-certificates.crt boundery-linux-client/app_packages/certifi/cacert.pem
 
       #Make root cert available to chromium/chromedriver's embedded ca list.
-      if [ ! -f .pki/nssdb/cert9.db ]; then
-        mkdir -p .pki/nssdb
-        certutil -N --empty-password -d sql:/home/vagrant/.pki/nssdb
-      fi
+      rm -rf .pki
+      mkdir -p .pki/nssdb
+      certutil -N --empty-password -d sql:/home/vagrant/.pki/nssdb
       certutil -A -n "fakeroot" -t "TCu,Cu,Tu" -i /usr/local/share/ca-certificates/fakeroot.crt \
           -d sql:/home/vagrant/.pki/nssdb || true
     SHELL
@@ -183,7 +197,8 @@ Vagrant.configure("2") do |config|
     server.vm.provider "virtualbox" do |vb|
       #vb.gui = true
       vb.linked_clone = false
-      vb.memory = "1024"
+      #We set memory to 1025 to signal the OS to install the pebble certificate.
+      vb.memory = "1025"
 
       vb.customize ["modifyvm", :id, "--firmware", "efi"]
 
@@ -200,6 +215,7 @@ Vagrant.configure("2") do |config|
     end
 
     server.vm.hostname = "server"
+    #adapter=>1 makes it replace the default VBox SlirpNAT interface.
     server.vm.network "private_network", :mac => "443839FFF001", :adapter => 1,
                       virtualbox__intnet: "client_router", auto_config: false
 
@@ -207,7 +223,5 @@ Vagrant.configure("2") do |config|
     server.ssh.port=22222
     server.ssh.host = "127.0.0.1"
     server.vm.synced_folder ".", "/vagrant", disabled: true
-
-    #XXX Need to figure out how to get pebble's root cert into the os...
   end
 end

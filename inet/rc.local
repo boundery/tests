@@ -1,5 +1,7 @@
 #!/bin/bash
 
+set -e
+
 echo 1 > /proc/sys/net/ipv4/ip_forward
 
 #/etc/dhcp/dhclient-enter-hooks.d/nodnsupdate protects this from eth0 dhcp renew.
@@ -12,6 +14,7 @@ fi
 python3 -u /usr/local/sbin/intercept.py --all-qtypes --tcp -u 10.0.2.3 \
         -f '*.boundery.me.:30.0.0.150' \
         -f 'boundery.me.:30.0.1.9' -f 'www.boundery.me.:30.0.1.9' \
+        -i 'mail.boundery.org. 60 IN A 30.0.0.1' \
         -i 'acme-v02.api.letsencrypt.org. 60 IN A 30.0.0.1' \
         -i 'acme-staging-v02.api.letsencrypt.org. 60 IN A 30.0.0.1' \
         -i 'checkip.amazonaws.com. 60 IN A 30.0.0.1' \
@@ -32,9 +35,28 @@ fi
 /usr/local/sbin/rewrite_pebble.sh -l >/var/log/rewrite_pebble.log 2>&1 &
 echo $! > /run/rewrite_pebble.pid
 
+mkdir -p /vagrant/build/emails/
+if [ -f /run/fake_smtpd.pid ]; then
+   kill -9 `cat /run/fake_smtpd.pid`
+   rm /run/fake_smtpd.pid
+fi
+python3 -u /usr/local/sbin/fake_smtpd.py /vagrant/build/emails/ >/var/log/fake_smtpd.log 2>&1 &
+echo $! > /run/fake_smtpd.pid
+
 if [ -f /run/pebble.pid ]; then
    kill -9 `cat /run/pebble.pid`
    rm /run/pebble.pid
 fi
 PEBBLE_VA_NOSLEEP=1 /usr/local/sbin/pebble -config /etc/pebble/pebble-config.json >/var/log/pebble.log 2>&1 &
 echo $! > /run/pebble.pid
+
+while ! ss -ln | grep -q :15000; do
+    sleep 1
+done
+wget --timeout 3 --no-check-certificate https://localhost:15000/roots/0 -O /tmp/fakeroot.crt
+if [ -f /run/serve_fakecert.pid ]; then
+    kill -9 `cat /run/serve_fakecert.pid`
+    rm /run/serve_fakecert.pid
+fi
+socat tcp-listen:8080,reuseaddr,fork exec:'cat /tmp/fakeroot.crt' > /var/log/serve_fakecert.log 2>&1 &
+echo $! > /run/serve_fakecert.pid

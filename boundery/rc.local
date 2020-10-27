@@ -1,5 +1,7 @@
 #!/bin/bash
 
+set -e
+
 #/etc/dhcp/dhclient-enter-hooks.d/nodnsupdate protects this from eth0 dhcp renew.
 echo "nameserver 30.0.1.1" > /etc/resolv.conf
 

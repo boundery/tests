@@ -1,5 +1,7 @@
 IMG_SIZE=300
 
+#So it runs everytime to clear old install
+.PHONY: build/server.img
 build/server.img:
 	@mkdir -p build
 	dd if=/dev/zero of=$@ bs=$$((1024*1024)) count=$(IMG_SIZE)
@@ -11,6 +13,8 @@ build/server.vmdk: | build/server.img
 	[ -f $@ ] || VBoxManage internalcommands createrawvmdk -filename $@ -rawdisk `readlink -f $< $|`
 	@VBoxManage internalcommands sethduuid $@ 00000000-99aa-0000-8899-aabbccddeeff
 
+ #So it runs everytime to clear stale ZT state.
+.PHONY: build/server_data.vdi
 build/server_data.vdi:
 	@mkdir -p build/empty
 	qemu-img convert -f vvfat -O vdi fat:32:build/empty $@
@@ -38,6 +42,7 @@ $(ROUTER):
 	vagrant up --no-provision router
 	@touch $@
 
+#XXX If not halted, client will hang on to old (possibly rm'd) build/server.vmdk
 CLIENT=build/stamp/client
 client: $(CLIENT)
 $(CLIENT): | build/server.vmdk $(ROUTER) $(INET)
@@ -152,15 +157,15 @@ $(UPLOAD_RPI3ZIP): $(shell git -C $(OS_SRC) ls-files | sed "s,^,$(OS_SRC)/,") $(
 test-linux-pczip: $(CLIENT_PROV) $(BOUNDERY_PROV) $(UPLOAD_CENTRAL) $(UPLOAD_PCZIP) $(UPLOAD_LINUX) build/server_data.vdi
 	vagrant halt -f server
 	vagrant provision --provision-with install client
-	@mdel -ibuild/server.img@@1M ::/pairingkey 2>/dev/null || true
+	@mcopy -ibuild/server.img@@1M -o /dev/null ::INSECURE_DEBUG
 	@dd conv=notrunc if=/dev/zero of=build/server.img seek=$$((0x100025)) count=1 bs=1 #FAT16 only!
 	vagrant ssh client -c '/vagrant/run_test.sh pc' &
 	@echo Waiting for client to finish writing image...
 	@while ! mdir -b -ibuild/server.img@@1M ::/pairingkey 2>/dev/null; do sleep 1; done
 	@while ! hd -v -s 0x100025 -n 1 build/server.img | grep -q '^00100025  00'; do sleep 1; done
-#	vagrant up server
+	vagrant up server
 	wait #for vagrant run run_test.sh
-#	XXX verify that preserve.txt contains "precious\n"
+	@[ `mtype -ibuild/server.img@@1M ::preserve.txt` = precious ]
 
 server-serial:
 	@script/vboxmgr controlvm server_VBOXID changeuartmode1 server build/serial_cons.sock
@@ -169,5 +174,4 @@ server-serial:
 #	XXX Perhaps wire serial console back to file? Even better if socat also updates file...
 
 client-vnc:
-	@script/vboxmgr client_VBOXID
 	gvncviewer localhost:0

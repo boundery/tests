@@ -1,1 +1,1 @@
-{"server": "mail.boundery.org", "user": "mailuser", "password": "mailpw"}
+{"server": "mail.boundery.org", "use_tls": false}

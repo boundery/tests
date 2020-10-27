@@ -9,6 +9,7 @@ COMMIT
 :OUTPUT ACCEPT [16:172]
 :POSTROUTING ACCEPT [20:257]
 -A POSTROUTING -o eth2 -j MASQUERADE
+-A POSTROUTING -o eth0 -m comment --comment "XXX So ZT can connect to relays." -j MASQUERADE
 -A PREROUTING  -p tcp -d 30.0.0.150 --dport 25 -j DNAT --to 192.168.1.9:25
 -A POSTROUTING -p tcp -s 192.168.1.0/24 -d 192.168.1.9 --dport 25 -j SNAT --to-source 30.0.0.150:25
 -A PREROUTING  -p tcp -d 30.0.0.150 --dport 80 -j DNAT --to 192.168.1.9:80
