@@ -178,9 +178,12 @@ Vagrant.configure("2") do |config|
       rm -rf boundery-linux-client*
       wget https://boundery.me/static/clients/boundery-linux-client.tar.gz
       tar zxvf boundery-linux-client.tar.gz
+      pushd boundery-linux-client
+      ./Boundery_Client-*-x86_64.AppImage --appimage-extract
+      popd
 
       #Make root cert available to client's embedded ca list.
-      cp /etc/ssl/certs/ca-certificates.crt boundery-linux-client/app_packages/certifi/cacert.pem
+      cp /etc/ssl/certs/ca-certificates.crt boundery-linux-client/squashfs-root/usr/app_packages/certifi/cacert.pem
 
       #Make root cert available to chromium/chromedriver's embedded ca list.
       rm -rf .pki

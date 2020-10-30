@@ -49,7 +49,7 @@ while ! ss -tln | grep -q ':9999'; do
     sleep 1
 done
 
-ZIPFILE_NAME="$1" BROWSER=/vagrant/fake_browser.sh boundery-linux-client/Boundery\ Client &
+ZIPFILE_NAME="$1" BROWSER=/vagrant/fake_browser.sh boundery-linux-client/squashfs-root/AppRun &
 
 fg %3 #tester
 jobs
