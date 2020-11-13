@@ -155,17 +155,18 @@ $(UPLOAD_RPI3ZIP): $(shell git -C $(OS_SRC) ls-files | sed "s,^,$(OS_SRC)/,") $(
 	@touch $@
 
 test-linux-pczip: $(CLIENT_PROV) $(BOUNDERY_PROV) $(UPLOAD_CENTRAL) $(UPLOAD_PCZIP) $(UPLOAD_LINUX) build/server_data.vdi
+	@rm -f build/linux-pczip-success
 	vagrant halt -f server
 	vagrant provision --provision-with install client
 	@mcopy -ibuild/server.img@@1M -o /dev/null ::INSECURE_DEBUG
 	@dd conv=notrunc if=/dev/zero of=build/server.img seek=$$((0x100025)) count=1 bs=1 #FAT16 only!
-	vagrant ssh client -c '/vagrant/run_test.sh pc' &
-	@echo Waiting for client to finish writing image...
-	@while ! mdir -b -ibuild/server.img@@1M ::/pairingkey 2>/dev/null; do sleep 1; done
-	@while ! hd -v -s 0x100025 -n 1 build/server.img | grep -q '^00100025  00'; do sleep 1; done
-	vagrant up server
+	vagrant ssh client -c '/vagrant/run_test.sh pc' & \
+	while ! mdir -b -ibuild/server.img@@1M ::/pairingkey 2>/dev/null; do sleep 1; done ; \
+	while ! hd -v -s 0x100025 -n 1 build/server.img | grep -q '^00100025  00'; do sleep 1; done ; \
+	vagrant up server ; \
 	wait #for vagrant run run_test.sh
 	@[ `mtype -ibuild/server.img@@1M ::preserve.txt` = precious ]
+	@[ -f build/linux-pczip-success ]
 
 server-serial:
 	@script/vboxmgr controlvm server_VBOXID changeuartmode1 server build/serial_cons.sock

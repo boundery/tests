@@ -131,3 +131,5 @@ assert('Applications Available to Install' in d.page_source)
 if '-d' in sys.argv:
     import code
     code.InteractiveConsole(locals=locals()).interact()
+
+os.system('touch /vagrant/build/linux-pczip-success')
